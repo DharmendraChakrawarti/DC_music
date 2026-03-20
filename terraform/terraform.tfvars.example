@@ -1,0 +1,20 @@
+# =============================================================
+#  EXAMPLE VARIABLE VALUES
+# =============================================================
+# Copy this file to terraform.tfvars and fill in your values:
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================
+
+aws_region   = "ap-south-1"
+project_name = "dcmusic"
+environment  = "dev"
+
+# EC2
+ec2_instance_type = "t3.micro"     # Free Tier eligible
+ec2_key_name      = "my-key-pair"  # !! CHANGE THIS to your actual key pair name
+
+# RDS
+db_instance_class = "db.t3.micro"  # Free Tier eligible
+db_name           = "student_db"
+db_username       = "admin"
+db_password       = "YourSecurePassword123!"  # !! CHANGE THIS
