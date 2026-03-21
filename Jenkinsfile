@@ -120,7 +120,7 @@ pipeline {
                         sh """
                             terraform plan \
                               -var="db_password=${DB_PASSWORD}" \
-                              -var="ec2_key_name=my-key-pair" \
+                              -var="ec2_key_name=ec2-ssh-key" \
                               -out=tfplan
                         """
 
