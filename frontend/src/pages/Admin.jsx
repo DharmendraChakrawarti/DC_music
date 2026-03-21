@@ -37,10 +37,11 @@ export default function Admin() {
   };
 
   return (
-    <div className="pt-24 px-8 pb-32">
-      <h1 className="text-3xl font-bold mb-8 text-brand">Admin Dashboard</h1>
+    <div className="pt-24 px-4 md:px-8 pb-32">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-brand">Admin Dashboard</h1>
       
-      <div className="bg-base-light rounded-lg border border-gray-800 overflow-hidden shadow-2xl">
+      {/* Desktop View */}
+      <div className="hidden md:block bg-base-light rounded-lg border border-gray-800 overflow-hidden shadow-2xl">
         <table className="w-full text-left">
           <thead className="border-b border-gray-800 text-gray-400 text-sm">
             <tr>
@@ -97,6 +98,63 @@ export default function Admin() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile View */}
+      <div className="md:hidden flex flex-col gap-4">
+        {songs.map((song, i) => (
+          <div key={song.id} className="bg-base-light rounded-lg border border-gray-800 p-4 shadow-xl flex flex-col gap-3">
+            <div className="flex justify-between items-start border-b border-gray-800/50 pb-3">
+              <div>
+                <div className="font-semibold text-white text-lg">{song.title}</div>
+                <div className="text-gray-400 text-sm">{song.artist}</div>
+              </div>
+              <div className="text-xs font-mono text-gray-500 bg-gray-800/50 px-2 py-1 rounded w-max">#{i + 1}</div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm mt-1">
+              <div className="text-gray-500">User</div>
+              <div className="text-gray-300 text-right truncate" title={song.uploadedBy?.email}>{song.uploadedBy?.email}</div>
+              
+              <div className="text-gray-500">Status</div>
+              <div className="flex justify-end">
+                {song.status === 'APPROVED' ? (
+                   <span className="flex items-center gap-1 text-green-400 bg-green-900/20 px-2 py-0.5 rounded text-xs border border-green-800/50"><CheckCircle size={12}/> APPROVED</span>
+                ) : song.status === 'PENDING' ? (
+                   <span className="flex items-center gap-1 text-yellow-500 bg-yellow-900/20 px-2 py-0.5 rounded text-xs border border-yellow-800/50"><Clock size={12}/> PENDING</span>
+                ) : (
+                   <span className="flex items-center gap-1 text-red-500 bg-red-900/20 px-2 py-0.5 rounded text-xs border border-red-800/50">REJECTED</span>
+                )}
+              </div>
+              
+              <div className="text-gray-500">Visibility</div>
+              <div className="text-gray-400 text-right">{song.visibility}</div>
+            </div>
+            
+            <div className="flex justify-end gap-4 pt-4 border-t border-gray-800/50 mt-2">
+              <button 
+                onClick={() => handleApprove(song.id)}
+                disabled={song.status === 'APPROVED'}
+                className={`flex items-center gap-1.5 hover:text-green-500 text-gray-400 transition-colors ${song.status === 'APPROVED' ? 'opacity-30 cursor-not-allowed hidden' : ''}`}
+                title="Approve & Publish"
+              >
+                <CheckCircle size={16} /> <span className="text-sm font-medium">Approve</span>
+              </button>
+              <button 
+                onClick={() => handleDelete(song.id)}
+                className="flex items-center gap-1.5 hover:text-red-500 text-gray-400 transition-colors"
+                title="Delete forever"
+              >
+                <Trash2 size={16} /> <span className="text-sm font-medium">Delete</span>
+              </button>
+            </div>
+          </div>
+        ))}
+        {songs.length === 0 && (
+          <div className="bg-base-light rounded-lg border border-gray-800 p-8 text-center text-gray-500">
+            No songs found in the system.
+          </div>
+        )}
       </div>
     </div>
   );
