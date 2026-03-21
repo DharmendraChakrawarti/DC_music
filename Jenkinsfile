@@ -221,7 +221,7 @@ pipeline {
                     echo "🚀 Deploying to EC2 at ${env.EC2_IP}..."
                     sh """
                         chmod 400 "\$SSH_KEY_FILE"
-                        ssh -o StrictHostKeyChecking=no -i \$SSH_KEY_FILE ec2-user@${env.EC2_IP} << 'DEPLOY_SCRIPT'
+                        ssh -o StrictHostKeyChecking=no -i "\$SSH_KEY_FILE" ec2-user@${env.EC2_IP} << 'DEPLOY_SCRIPT'
                             # Login to ECR
                             aws ecr get-login-password --region ${AWS_REGION} | \\
                               docker login --username AWS --password-stdin \\
