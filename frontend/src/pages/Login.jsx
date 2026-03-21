@@ -72,10 +72,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-4 text-xs text-gray-500 text-center">
-          <p>Admin: admin@dcmusic.com / admin</p>
-          <p>User: user@dcmusic.com / user</p>
-        </div>
         
         <div className="mt-8 text-sm text-gray-400 pt-6 border-t border-gray-800 w-full text-center">
           Don't have an account? <Link to="/register" className="text-white font-bold hover:underline hover:text-brand">Sign up for DC Music</Link>
