@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -27,4 +29,113 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* =============== Player Styles =============== */
+
+/* Expanded player background — dynamic gradient like Spotify */
+.player-expanded-bg {
+  background: linear-gradient(180deg,
+    #1a1a2e 0%,
+    #16213e 30%,
+    #0f3460 60%,
+    #121212 100%
+  );
+  animation: playerFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes playerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Album art shadow glow */
+.player-album-shadow {
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(29, 185, 84, 0.08);
+}
+
+/* Custom range inputs for player */
+.player-range {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  border-radius: 9999px;
+  height: 4px;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.player-range:hover {
+  height: 6px;
+}
+
+.player-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.player-range:hover::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.player-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.player-range:hover::-moz-range-thumb {
+  opacity: 1;
+}
+
+/* Safe area for mobile notch */
+.pt-safe-top {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+/* =============== Song Card Hover Animation =============== */
+.song-card {
+  transition: background-color 0.25s ease, transform 0.2s ease;
+}
+
+.song-card:hover {
+  transform: translateY(-4px);
+}
+
+.song-card .play-btn-overlay {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.song-card:hover .play-btn-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =============== Smooth Transition Utilities =============== */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

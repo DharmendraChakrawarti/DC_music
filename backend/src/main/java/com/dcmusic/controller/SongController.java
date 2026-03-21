@@ -5,6 +5,7 @@ import com.dcmusic.service.SongService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -92,13 +94,56 @@ public class SongController {
         }
     }
     
+    /**
+     * Stream audio with HTTP Range support.
+     * Range requests are critical for:
+     * - Mobile browsers (Safari, Chrome on iOS)
+     * - Seeking in audio on most browsers
+     * - Proper playback on EC2/cloud deployments
+     */
     @GetMapping("/stream/{fileName:.+}")
-    public ResponseEntity<Resource> streamAudio(@PathVariable String fileName) {
+    public ResponseEntity<Resource> streamAudio(
+            @PathVariable String fileName,
+            @RequestHeader(value = "Range", required = false) String rangeHeader) {
         try {
             Resource resource = songService.loadSongAsResource(fileName);
+            long fileLength = resource.contentLength();
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("audio/mpeg"));
+            headers.add("Accept-Ranges", "bytes");
+            headers.add("Access-Control-Allow-Origin", "*");
+            headers.add("Access-Control-Allow-Headers", "Range");
+            headers.add("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
+            
+            // Handle Range request for partial content (needed for seeking & mobile playback)
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                String[] ranges = rangeHeader.substring(6).split("-");
+                long rangeStart = Long.parseLong(ranges[0]);
+                long rangeEnd = ranges.length > 1 && !ranges[1].isEmpty()
+                        ? Long.parseLong(ranges[1])
+                        : fileLength - 1;
+                
+                if (rangeEnd >= fileLength) {
+                    rangeEnd = fileLength - 1;
+                }
+                
+                long contentLength = rangeEnd - rangeStart + 1;
+                
+                headers.add("Content-Range", "bytes " + rangeStart + "-" + rangeEnd + "/" + fileLength);
+                headers.setContentLength(contentLength);
+                
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .headers(headers)
+                        .body(resource);
+            }
+            
+            // Full content response
+            headers.setContentLength(fileLength);
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"");
+            
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("audio/mpeg"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .headers(headers)
                     .body(resource);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();

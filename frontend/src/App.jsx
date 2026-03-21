@@ -31,7 +31,7 @@ export default function App() {
       <Sidebar isOpen={sidebarOpen} closeSidebar={() => setSidebarOpen(false)} />
       <div className="flex flex-col flex-1 overflow-hidden relative">
         <TopBar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-y-auto pb-32 bg-gradient-to-b from-base-light to-base-dark">
+        <main className="flex-1 overflow-y-auto pb-28 md:pb-32 bg-gradient-to-b from-base-light to-base-dark">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<Search />} />
