@@ -38,7 +38,7 @@ export default function Player() {
     const audio = audioRef.current;
     if (!audio || !currentSong) return;
 
-    audio.src = `http://localhost:8080/api/songs/stream/${encodeURIComponent(currentSong.fileUrl)}`;
+    audio.src = `http://${window.location.hostname}:8080/api/songs/stream/${encodeURIComponent(currentSong.fileUrl)}`;
     audio.load();
     if (isPlaying) {
       const promise = audio.play();
