@@ -227,20 +227,9 @@ pipeline {
                     string(credentialsId: 'rds-password', variable: 'DB_PASSWORD')
                 ]) {
                     echo "🚀 Deploying to EC2 at ${env.EC2_IP}..."
-                    sh """
-                        chmod 400 "\$SSH_KEY_FILE"
-                        ssh -v -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "\$SSH_KEY_FILE" ec2-user@${env.EC2_IP} << DEPLOY_SCRIPT
-                            # Login to ECR
-                            aws ecr get-login-password --region ${AWS_REGION} | \\
-                              docker login --username AWS --password-stdin \\
-                              ${env.AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-                            # Ensure uploads directory exists for persistent storage
-                            mkdir -p /home/ec2-user/app/uploads
-
-                            # Write the complete docker-compose.yml with volume mounts
-                            cat > /home/ec2-user/app/docker-compose.yml << 'COMPOSEFILE'
-services:
+                    // Step 1: Generate docker-compose.yml locally
+                    writeFile file: 'dc-compose-deploy.yml', text: """services:
   backend:
     image: ${env.ECR_BACKEND}:latest
     container_name: dcmusic-backend
@@ -274,7 +263,26 @@ services:
 networks:
   app-network:
     driver: bridge
-COMPOSEFILE
+"""
+
+                    // Step 2: Copy docker-compose.yml to EC2 via SCP
+                    sh """
+                        chmod 400 "\$SSH_KEY_FILE"
+                        scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "\$SSH_KEY_FILE" \
+                            dc-compose-deploy.yml ec2-user@${env.EC2_IP}:/home/ec2-user/app/docker-compose.yml
+                    """
+
+                    // Step 3: SSH and deploy
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "\$SSH_KEY_FILE" ec2-user@${env.EC2_IP} << DEPLOY_SCRIPT
+                            # Login to ECR
+                            aws ecr get-login-password --region ${AWS_REGION} | \\
+                              docker login --username AWS --password-stdin \\
+                              ${env.AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                            # Ensure uploads directory exists with correct permissions
+                            mkdir -p /home/ec2-user/app/uploads
+                            chmod 777 /home/ec2-user/app/uploads
 
                             # Pull latest images
                             cd /home/ec2-user/app
@@ -283,6 +291,10 @@ COMPOSEFILE
                             # Restart containers with new images
                             docker-compose down
                             docker-compose up -d
+
+                            # Verify uploads volume is mounted
+                            echo "--- Checking volume mount ---"
+                            docker inspect dcmusic-backend --format='{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}}' || true
 
                             # Clean up old images
                             docker image prune -f
