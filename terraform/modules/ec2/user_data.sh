@@ -26,6 +26,7 @@ aws ecr get-login-password --region ${aws_region} | docker login --username AWS 
 
 # --- 4. Create docker-compose file ---
 mkdir -p /home/ec2-user/app
+mkdir -p /home/ec2-user/app/uploads
 cat > /home/ec2-user/app/docker-compose.yml <<'COMPOSE'
 services:
   backend:
@@ -34,6 +35,8 @@ services:
     restart: always
     ports:
       - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
     environment:
       SPRING_PROFILES_ACTIVE: aws
       SPRING_DATASOURCE_URL: "jdbc:mysql://${rds_endpoint}/${rds_db_name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true"

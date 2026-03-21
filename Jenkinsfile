@@ -227,8 +227,17 @@ pipeline {
                               docker login --username AWS --password-stdin \\
                               ${env.AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-                            # Pull latest images
+                            # Ensure uploads directory exists for persistent storage
+                            mkdir -p /home/ec2-user/app/uploads
+
+                            # Add volume mapping if not already present in docker-compose
                             cd /home/ec2-user/app
+                            if ! grep -q './uploads:/app/uploads' docker-compose.yml 2>/dev/null; then
+                              sed -i '/ports:/,/\"8080:8080\"/{/\"8080:8080\"/a\\    volumes:\\n      - ./uploads:/app/uploads
+                              }' docker-compose.yml
+                            fi
+
+                            # Pull latest images
                             docker-compose pull
 
                             # Restart containers with new images
