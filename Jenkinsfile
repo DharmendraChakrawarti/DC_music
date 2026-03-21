@@ -1,5 +1,5 @@
 // =============================================================
-//  JENKINSFILE — CI/CD Pipeline for Student Management System
+//  JENKINSFILE — CI/CD Pipeline for DC Music
 // =============================================================
 //
 //  WHAT THIS PIPELINE DOES (6 stages):
@@ -108,32 +108,39 @@ pipeline {
                         // -backend-config overrides the bucket name in provider.tf
                         // so we can dynamically use the AWS Account ID
                         sh """
-                            terraform init \
-                              -backend-config="bucket=dcmusic-tf-state-${env.AWS_ACCOUNT_ID}" \
-                              -backend-config="key=dev/terraform.tfstate" \
-                              -backend-config="region=${AWS_REGION}" \
-                              -backend-config="dynamodb_table=dcmusic-tf-lock" \
+                            terraform init \\
+                              -backend-config="bucket=dcmusic-tf-state-${env.AWS_ACCOUNT_ID}" \\
+                              -backend-config="key=dev/terraform.tfstate" \\
+                              -backend-config="region=${AWS_REGION}" \\
+                              -backend-config="dynamodb_table=dcmusic-tf-lock" \\
                               -backend-config="encrypt=true"
                         """
 
                         echo '📋 Planning infrastructure changes...'
                         sh """
-                            terraform plan \
-                              -var="db_password=${DB_PASSWORD}" \
-                              -var="ec2_key_name=my-key-pair" \
+                            terraform plan \\
+                              -var="db_password=${DB_PASSWORD}" \\
+                              -var="ec2_key_name=my-key-pair" \\
                               -out=tfplan
                         """
 
                         echo '🚀 Applying infrastructure...'
                         sh 'terraform apply -auto-approve tfplan'
 
-                        // Capture EC2 IP for deployment stage
+                        // Capture EC2 IP and RDS details for deployment stage
                         script {
                             env.EC2_IP = sh(
                                 script: "terraform output -raw ec2_public_ip",
                                 returnStdout: true
                             ).trim()
-                            echo "✅ EC2 Public IP: ${env.EC2_IP}"
+
+                            env.RDS_ENDPOINT = sh(
+                                script: "terraform output -raw rds_endpoint",
+                                returnStdout: true
+                            ).trim()
+
+                            echo "✅ EC2 Public IP:  ${env.EC2_IP}"
+                            echo "✅ RDS Endpoint:   ${env.RDS_ENDPOINT}"
                         }
                     }
                 }
@@ -182,8 +189,8 @@ pipeline {
 
                     echo '🔐 Logging into AWS ECR...'
                     sh """
-                        aws ecr get-login-password --region ${AWS_REGION} | \
-                        docker login --username AWS --password-stdin \
+                        aws ecr get-login-password --region ${AWS_REGION} | \\
+                        docker login --username AWS --password-stdin \\
                         ${env.AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                     """
 
@@ -216,12 +223,13 @@ pipeline {
                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'],
                     sshUserPrivateKey(credentialsId: 'ec2-ssh-key',
                                      keyFileVariable: 'SSH_KEY_FILE',
-                                     usernameVariable: 'SSH_USER')
+                                     usernameVariable: 'SSH_USER'),
+                    string(credentialsId: 'rds-password', variable: 'DB_PASSWORD')
                 ]) {
                     echo "🚀 Deploying to EC2 at ${env.EC2_IP}..."
                     sh """
                         chmod 400 "\$SSH_KEY_FILE"
-                        ssh -v -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "\$SSH_KEY_FILE" ec2-user@${env.EC2_IP} << 'DEPLOY_SCRIPT'
+                        ssh -v -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "\$SSH_KEY_FILE" ec2-user@${env.EC2_IP} << DEPLOY_SCRIPT
                             # Login to ECR
                             aws ecr get-login-password --region ${AWS_REGION} | \\
                               docker login --username AWS --password-stdin \\
@@ -230,14 +238,46 @@ pipeline {
                             # Ensure uploads directory exists for persistent storage
                             mkdir -p /home/ec2-user/app/uploads
 
-                            # Add volume mapping if not already present in docker-compose
-                            cd /home/ec2-user/app
-                            if ! grep -q './uploads:/app/uploads' docker-compose.yml 2>/dev/null; then
-                              sed -i '/ports:/,/\"8080:8080\"/{/\"8080:8080\"/a\\    volumes:\\n      - ./uploads:/app/uploads
-                              }' docker-compose.yml
-                            fi
+                            # Write the complete docker-compose.yml with volume mounts
+                            cat > /home/ec2-user/app/docker-compose.yml << 'COMPOSEFILE'
+services:
+  backend:
+    image: ${env.ECR_BACKEND}:latest
+    container_name: dcmusic-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
+    environment:
+      SPRING_PROFILES_ACTIVE: aws
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${env.RDS_ENDPOINT}/student_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true"
+      SPRING_DATASOURCE_USERNAME: "admin"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      APP_CORS_ALLOWED_ORIGINS: "*"
+    networks:
+      - app-network
+
+  frontend:
+    image: ${env.ECR_FRONTEND}:latest
+    container_name: dcmusic-frontend
+    restart: always
+    ports:
+      - "80:80"
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+COMPOSEFILE
 
                             # Pull latest images
+                            cd /home/ec2-user/app
                             docker-compose pull
 
                             # Restart containers with new images
