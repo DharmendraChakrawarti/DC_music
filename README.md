@@ -58,11 +58,25 @@ The entire application is 100% Dockerized for zero-configuration, one-command st
 ## ☁️ Cloud & Production Infrastructure (AWS)
 This directory includes a complete `terraform/` folder configured to deploy the application into **Amazon Web Services (AWS)** seamlessly.
 
+👉 **[Read the complete Infrastructure Overview in `infra.md`](infra.md)** for a detailed dive into the VPC, Security Groups, ECR, RDS, and EC2 topology.
+
 ### Provisioned AWS Resources
 - **VPC & Subnets:** Custom public and private networks ensuring secure access points.
-- **RDS MySQL 8.0:** A persistent, highly-available managed database.
-- **EC2 Instance:** The central web-server hosting our Docker containers.
-- **IAM Roles & ECR:** Secure Elastic Container Registries allowing EC2 to pull our latest pushed images automatically.
+- **RDS MySQL 8.0:** A persistent, highly-available managed database in private subnets.
+- **EC2 Instance:** The central web-server hosting our Docker containers in public subnets.
+- **IAM Roles & ECR:** Secure Elastic Container Registries allowing EC2 to pull our latest pushed images automatically securely via IAM instances.
+
+---
+
+## 📂 Project Structure Overview
+- `/frontend`: React + Vite UI application.
+- `/backend`: Spring Boot 3 Java API handling logic, JWT Auth, and Audio Uploads.
+- `/terraform`: Terraform AWS provision modules (`vpc`, `security`, `ecr`, `rds`, `ec2`).
+- `docker-compose.yml`: For booting up both frontend & backend servers.
+- `Jenkinsfile`: Entire CI/CD orchestration pipeline pipeline.
+- `infra.md`: Deep dive into infrastructure architecture.
+- `api-docs.md`: Details about the backend REST endpoints.
+- `jenkinsinfo.md`: Complete overview of the Jenkins deployment and EC2 configuration points.
 
 ### Deploying Infrastructure
 1. Move to the Terraform directory:
